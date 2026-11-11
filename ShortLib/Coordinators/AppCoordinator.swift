@@ -30,7 +30,7 @@ final class AppCoordinator: NSObject, Coordinator {
         add(summaries)
 
         let profileRouter = Router()
-        profileRouter.setRoot(ProfileView())
+        profileRouter.setRoot(ProfileView(viewModel: ProfileViewModel(deps: deps)))
 
         libraryRouter.navigationController.tabBarItem = item("Библиотека", "books.vertical")
         addTabPlaceholder.tabBarItem = item("Добавить", "plus.circle")

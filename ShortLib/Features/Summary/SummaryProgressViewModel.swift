@@ -22,6 +22,11 @@ final class SummaryProgressViewModel: ObservableObject {
         self.deps = deps
     }
 
+    /// Этап связей показываем, только если спойлеры разрешены.
+    var stages: [SummaryProgress.Stage] {
+        SummaryProgress.Stage.allCases.filter { $0 != .connecting || !preset.noSpoilers }
+    }
+
     var badgeText: String { "\(preset.level.title) · \(Int((preset.ratio * 100).rounded()))%" }
     var percentText: String { "\(Int((progress.fraction * 100).rounded()))%" }
     var chaptersInRange: Int { preset.chapterRange.count }
@@ -71,7 +76,8 @@ final class SummaryProgressViewModel: ObservableObject {
 
             update(SummaryProgress(stage: .cleaning, done: 1, total: 1))
 
-            let summary = try await deps.summaryEngine.summarize(book: book, preset: preset) { [weak self] p in
+            let engine = deps.makeSummaryEngine()
+            let summary = try await engine.summarize(book: book, preset: preset) { [weak self] p in
                 Task { @MainActor in self?.update(p) }
             }
             book.summary = summary

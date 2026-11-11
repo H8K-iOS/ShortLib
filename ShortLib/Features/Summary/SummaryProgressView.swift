@@ -28,7 +28,7 @@ struct SummaryProgressView: View {
                         .padding(.vertical, DS.Space.s)
 
                     VStack(spacing: 0) {
-                        ForEach(SummaryProgress.Stage.allCases, id: \.self) { stage in
+                        ForEach(viewModel.stages, id: \.self) { stage in
                             StepRow(title: stage.title, detail: viewModel.detail(of: stage), state: viewModel.state(of: stage))
                         }
                     }

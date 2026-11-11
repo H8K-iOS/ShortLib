@@ -34,7 +34,8 @@ final class SummaryCoordinator: Coordinator {
 
     private func showSettings() {
         guard let book = deps.repository.book(id: bookID) else { return finish() }
-        let vm = SummarySettingsViewModel(book: book, defaults: deps.preferences)
+        let vm = SummarySettingsViewModel(book: book, defaults: deps.preferences,
+                                          usesLanguageModel: deps.usesLanguageModel)
         vm.onClose = { [weak self] in
             self?.router.dismiss()
             self?.finish()
@@ -91,17 +92,5 @@ final class SummaryCoordinator: Coordinator {
         let callback = onFinish
         onFinish = nil
         callback?()
-    }
-}
-
-/// Стартовые настройки пересказа из профиля.
-final class Preferences {
-    private let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
-
-    static let detailLevelKey = "defaultDetailLevel"
-
-    var defaultDetailLevel: DetailLevel {
-        DetailLevel(rawValue: defaults.string(forKey: Self.detailLevelKey) ?? "") ?? .balanced
     }
 }

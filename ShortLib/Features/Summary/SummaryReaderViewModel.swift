@@ -4,9 +4,15 @@ import Combine
 @MainActor
 final class SummaryReaderViewModel: ObservableObject {
     enum Tab: String, CaseIterable, Identifiable {
-        case overview, chapters
+        case overview, chapters, characters
         var id: String { rawValue }
-        var title: String { self == .overview ? "Кратко" : "По главам" }
+        var title: String {
+            switch self {
+            case .overview: return "Кратко"
+            case .chapters: return "По главам"
+            case .characters: return "Персонажи"
+            }
+        }
     }
 
     @Published private(set) var book: Book?
@@ -23,10 +29,15 @@ final class SummaryReaderViewModel: ObservableObject {
 
     var summary: Summary? { book?.summary }
 
+    var tabs: [Tab] {
+        (summary?.characters?.isEmpty ?? true) ? [.overview, .chapters] : Tab.allCases
+    }
+
     var metaText: String {
         guard let summary else { return "" }
         let r = summary.preset.chapterRange
-        return "Гл. \(r.lowerBound)–\(r.upperBound) · \(summary.wordCount.formatted()) слов · ≈ \(summary.readingMinutes) мин"
+        let engine = summary.engine.map { " · \($0)" } ?? ""
+        return "Гл. \(r.lowerBound)–\(r.upperBound) · \(summary.wordCount.formatted()) слов · ≈ \(summary.readingMinutes) мин\(engine)"
     }
 
     var shareText: String {

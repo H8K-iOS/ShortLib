@@ -30,7 +30,7 @@ struct SummaryReaderView: View {
                         }
 
                         HStack(spacing: DS.Space.xl) {
-                            ForEach(SummaryReaderViewModel.Tab.allCases) { tab in
+                            ForEach(viewModel.tabs) { tab in
                                 Button { viewModel.tab = tab } label: {
                                     VStack(spacing: DS.Space.s) {
                                         Text(tab.title).font(DS.Font.headline)
@@ -54,7 +54,28 @@ struct SummaryReaderView: View {
                                     VStack(alignment: .leading, spacing: DS.Space.s) {
                                         Text("Глава \(chapter.index) · \(chapter.title)").font(DS.Font.headline)
                                         Text(chapter.text).font(DS.Font.body).lineSpacing(4)
+                                        if let links = chapter.connections {
+                                            Label(links, systemImage: "link")
+                                                .font(DS.Font.callout)
+                                                .foregroundColor(DS.Color.secondary)
+                                                .padding(DS.Space.m)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(DS.Color.surface)
+                                                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+                                        }
                                     }
+                                }
+                            }
+                        case .characters:
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(summary.characters ?? []) { person in
+                                    VStack(alignment: .leading, spacing: DS.Space.xs) {
+                                        Text(person.name).font(DS.Font.headline)
+                                        Text(person.note).font(DS.Font.callout).foregroundColor(DS.Color.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, DS.Space.m)
+                                    .overlay(alignment: .bottom) { Rectangle().fill(DS.Color.line).frame(height: 1) }
                                 }
                             }
                         }

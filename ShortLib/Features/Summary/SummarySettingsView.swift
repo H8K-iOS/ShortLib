@@ -22,6 +22,21 @@ struct SummarySettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.xl) {
+                    HStack(alignment: .top, spacing: DS.Space.m) {
+                        Image(systemName: viewModel.usesLanguageModel ? "sparkles" : "text.quote")
+                            .font(DS.Font.headline)
+                            .foregroundColor(viewModel.usesLanguageModel ? DS.Color.accent : DS.Color.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.engineTitle).font(DS.Font.headline)
+                            Text(viewModel.engineDetail).font(DS.Font.caption).foregroundColor(DS.Color.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DS.Space.m)
+                    .background(DS.Color.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+
                     SettingsGroup(title: "Детальность") {
                         DetailLevelPicker(level: $viewModel.level, ratio: $viewModel.ratio)
                         Text(viewModel.estimateText).font(DS.Font.caption).foregroundColor(DS.Color.secondary)
@@ -41,7 +56,7 @@ struct SummarySettingsView: View {
                         Toggle(isOn: $viewModel.noSpoilers) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Без спойлеров").font(DS.Font.headline)
-                                Text("Пересказ не заглядывает дальше выбранной главы")
+                                Text(viewModel.spoilerDetail)
                                     .font(DS.Font.caption).foregroundColor(DS.Color.secondary)
                             }
                         }

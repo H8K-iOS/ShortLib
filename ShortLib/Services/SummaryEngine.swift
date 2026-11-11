@@ -33,7 +33,7 @@ struct ExtractiveSummaryEngine: SummaryEngine {
         let overview = Self.summarize(text: joined, ratio: 0.25, focus: preset.focus, maxSentences: 8)
         progress(SummaryProgress(stage: .overview, done: 1, total: 1))
 
-        return Summary(preset: preset, overview: overview, chapters: result, createdAt: Date())
+        return Summary(preset: preset, overview: overview, chapters: result, createdAt: Date(), engine: "Ключевые фразы")
     }
 
     // MARK: - Algorithm

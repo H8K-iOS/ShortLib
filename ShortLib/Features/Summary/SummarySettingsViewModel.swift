@@ -12,10 +12,15 @@ final class SummarySettingsViewModel: ObservableObject {
     var onClose: (() -> Void)?
 
     let book: Book
+    /// Пересказ своими словами (есть ключ API) или бесплатные ключевые фразы.
+    let usesLanguageModel: Bool
     private let defaultLevel: DetailLevel
+    private let language: SummaryLanguage
 
-    init(book: Book, defaults: Preferences) {
+    init(book: Book, defaults: Preferences, usesLanguageModel: Bool) {
         self.book = book
+        self.usesLanguageModel = usesLanguageModel
+        language = defaults.summaryLanguage
         let start = book.summary?.preset
         defaultLevel = defaults.defaultDetailLevel
         level = start?.level ?? defaultLevel
@@ -30,11 +35,26 @@ final class SummarySettingsViewModel: ObservableObject {
 
     var preset: SummaryPreset {
         SummaryPreset(level: level, ratio: ratio, focus: focus, noSpoilers: noSpoilers,
-                      chapterRange: 1...max(1, min(lastChapter, chapterCount)))
+                      chapterRange: 1...max(1, min(lastChapter, chapterCount)), language: language)
     }
 
     var estimateText: String {
         "≈ \(preset.estimatedMinutes(for: book)) мин чтения · главы 1–\(preset.chapterRange.upperBound)"
+    }
+
+    var engineTitle: String {
+        usesLanguageModel ? "Пересказ своими словами · Claude" : "Сейчас: ключевые фразы из текста"
+    }
+
+    var engineDetail: String {
+        usesLanguageModel
+            ? SummaryCostEstimate(book: book, preset: preset).text
+            : "Чтобы получить связный пересказ с учётом прошлых глав, добавьте ключ Claude API в Профиле."
+    }
+
+    var spoilerDetail: String {
+        noSpoilers ? "Пересказ не заглядывает дальше выбранной главы"
+                   : "Добавим связи с будущими главами: что подготовлено и что раскроется позже"
     }
 
     func toggle(_ item: SummaryFocus) {
