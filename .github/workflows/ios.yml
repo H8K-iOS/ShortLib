@@ -1,0 +1,76 @@
+name: iOS build & simulator run
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-run:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Pick iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          for rt in sorted(d, reverse=True):
+              if 'iOS' not in rt: continue
+              for dev in d[rt]:
+                  if dev['name'].startswith('iPhone') and 'Pro' in dev['name']:
+                      print(dev['udid']); sys.exit()
+          ")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available | grep "$UDID"
+
+      - name: Build for simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ShortLib.xcodeproj \
+            -scheme ShortLib \
+            -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build.log | grep -E "error:|warning: \[Guidelines\]|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Run in simulator and take screenshots
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          APP=$(find build/Build/Products -name "ShortLib.app" -maxdepth 3 | head -1)
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+          xcrun simctl ui "$UDID" appearance light
+          xcrun simctl launch "$UDID" com.shortlib.app
+          sleep 6
+          xcrun simctl io "$UDID" screenshot screenshots/library-light.png
+          xcrun simctl ui "$UDID" appearance dark
+          sleep 3
+          xcrun simctl io "$UDID" screenshot screenshots/library-dark.png
+          # Убеждаемся, что приложение не упало
+          xcrun simctl spawn "$UDID" launchctl list | grep -q com.shortlib.app && echo "App is running"
+
+      - name: Upload screenshots and build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shortlib-run
+          path: |
+            screenshots/
+            build.log
