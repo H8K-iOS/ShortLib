@@ -13,12 +13,21 @@ enum DetailLevel: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Доля от исходного объёма.
+    /// Доля от исходного объёма по умолчанию (позиция ползунка).
     var defaultRatio: Double {
         switch self {
-        case .brief: return 0.04
-        case .balanced: return 0.08
-        case .detailed: return 0.15
+        case .brief: return 0.06
+        case .balanced: return 0.12
+        case .detailed: return 0.20
+        }
+    }
+
+    /// Границы длины пересказа одной главы в словах. Доля из ползунка сдвигает длину внутри них.
+    var wordRange: ClosedRange<Int> {
+        switch self {
+        case .brief: return 200...400
+        case .balanced: return 400...700
+        case .detailed: return 700...900
         }
     }
 
@@ -88,13 +97,24 @@ struct SummaryPreset: Codable, Hashable {
     static let readingSpeed = 230.0
 
     func estimatedMinutes(for book: Book) -> Int {
-        let words = Double(book.estimatedWordCount(in: chapterRange)) * ratio
+        let chapters = book.chapters.filter { chapterRange.contains($0.index) }
+        let words = chapters.isEmpty
+            ? Double(book.estimatedWordCount(in: chapterRange)) * ratio
+            : Double(chapters.map { targetWords(forChapterWords: $0.isLoaded ? $0.wordCount : 3_000) }.reduce(0, +))
         return max(1, Int((words / Self.readingSpeed).rounded()))
     }
 
-    /// Целевая длина пересказа одной главы в словах.
-    static func targetWords(forChapterWords words: Int, ratio: Double) -> Int {
-        min(1_500, max(40, Int(Double(words) * ratio)))
+    /// Пересказ не длиннее этой доли главы — иначе на коротких главах (веб-новеллы) нет сжатия.
+    static let maxChapterShare = 0.35
+
+    /// Целевая длина пересказа одной главы в словах:
+    /// доля главы, зажатая в диапазон уровня, но не больше 35% самой главы.
+    func targetWords(forChapterWords words: Int) -> Int {
+        let range = level.wordRange
+        let proportional = Int(Double(words) * ratio)
+        let clamped = min(range.upperBound, max(range.lowerBound, proportional))
+        let capped = min(clamped, Int(Double(words) * Self.maxChapterShare))
+        return max(40, capped)
     }
 }
 

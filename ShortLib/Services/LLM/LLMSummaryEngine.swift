@@ -35,17 +35,19 @@ struct LLMSummaryEngine: SummaryEngine {
 
         for (i, chapter) in chapters.enumerated() {
             try Task.checkCancellation()
-            let target = SummaryPreset.targetWords(forChapterWords: chapter.wordCount, ratio: preset.ratio)
+            let target = preset.targetWords(forChapterWords: chapter.wordCount)
             let (input, isNotes) = try await prepare(chapter, memory: memory, target: target, system: system)
 
+            // Запас: пересказ + скрытый разбор (≈ 400 токенов) + память сюжета (≈ 1 100).
             let response = try await client.complete(
                 system: system,
                 prompt: Prompts.chapter(index: chapter.index, title: chapter.title, text: input, isNotes: isNotes,
-                                        memory: memory, previousSummary: previous, targetWords: target),
+                                        level: preset.level, memory: memory, previousSummary: previous,
+                                        targetWords: target),
                 model: chapterModel,
-                maxTokens: tokens(forWords: target) + 1_000
+                maxTokens: tokens(forWords: target) + Self.analysisTokens + 1_100
             )
-            let summary = TagParser.value("summary", in: response) ?? response
+            let summary = TagParser.value("summary", in: response) ?? Self.stripService(response)
             memory = TagParser.value("memory", in: response) ?? memory
             previous = summary
             results.append(ChapterSummary(index: chapter.index, title: chapter.title, text: summary))
@@ -169,6 +171,22 @@ struct LLMSummaryEngine: SummaryEngine {
     /// Русский текст ≈ 2,5–3 токена на слово; берём с запасом.
     private func tokens(forWords words: Int) -> Int { min(8_000, Int(Double(words) * 3.2)) }
 
+    /// Скрытый разбор главы перед пересказом (до 120 слов).
+    static let analysisTokens = 400
+
+    /// Если модель не закрыла тег <summary>, убираем из ответа служебные блоки, чтобы читатель их не увидел.
+    static func stripService(_ response: String) -> String {
+        var text = response
+        for tag in ["analysis", "memory"] {
+            while let open = text.range(of: "<\(tag)>") {
+                let end = text.range(of: "</\(tag)>", range: open.upperBound..<text.endIndex)?.upperBound ?? text.endIndex
+                text.removeSubrange(open.lowerBound..<end)
+            }
+        }
+        return text.replacingOccurrences(of: "<summary>", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Делит текст на части по абзацам, не разрывая их.
     static func split(_ text: String, maxWords: Int) -> [String] {
         let paragraphs = text.components(separatedBy: "\n\n")
@@ -206,7 +224,7 @@ struct SummaryCostEstimate {
         let chapters = book.chapters.filter { preset.chapterRange.contains($0.index) }
         let words = chapters.map { $0.isLoaded ? $0.wordCount : 3_000 }
         let totalWords = words.reduce(0, +)
-        let summaryWords = words.map { SummaryPreset.targetWords(forChapterWords: $0, ratio: preset.ratio) }.reduce(0, +)
+        let summaryWords = words.map { preset.targetWords(forChapterWords: $0) }.reduce(0, +)
         let chunks = words.map { max(1, Int(ceil(Double($0) / 8_000))) }.map { $0 > 1 ? $0 : 0 }.reduce(0, +)
         let connections = preset.noSpoilers ? 0 : chapters.count
         let arcs = summaryWords > 12_000 ? Int(ceil(Double(chapters.count) / 15)) : 0
@@ -214,7 +232,9 @@ struct SummaryCostEstimate {
         requests = chapters.count + chunks + connections + arcs + 1
         // Вход: текст глав + память и предыдущий пересказ в каждом запросе + системный промпт.
         inputTokens = Int(Double(totalWords) * 2.8) + chapters.count * 1_800 + connections * 1_200 + summaryWords * 3
-        outputTokens = Int(Double(summaryWords) * 2.8) + chapters.count * 450 + connections * 80 + 2_000
+        // Выход: пересказы + скрытый разбор и память в каждой главе + связи + сводка.
+        outputTokens = Int(Double(summaryWords) * 2.8)
+            + chapters.count * (450 + LLMSummaryEngine.analysisTokens) + connections * 80 + 2_000
     }
 
     var text: String {
