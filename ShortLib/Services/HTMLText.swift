@@ -21,6 +21,15 @@ enum HTMLText {
         return String(text[r])
     }
 
+    /// Первая группа каждого совпадения.
+    static func allMatches(_ pattern: String, in text: String) -> [String] {
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
+        return re.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { m in
+            guard m.numberOfRanges > 1, let r = Range(m.range(at: 1), in: text) else { return nil }
+            return String(text[r])
+        }
+    }
+
     static func replace(_ text: String, _ pattern: String, with template: String) -> String {
         guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
         return re.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
