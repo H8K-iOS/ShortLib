@@ -15,18 +15,19 @@ final class LibraryCoordinator: Coordinator {
     }
 
     func start() {
-        let vm = LibraryViewModel(repository: deps.repository)
+        let vm = LibraryViewModel(repository: deps.repository, generation: deps.generation)
         vm.onSelectBook = { [weak self] id in self?.showDetail(bookID: id) }
         vm.onAddBook = { [weak self] in self?.onAddBook?() }
         router.setRoot(LibraryView(viewModel: vm))
     }
 
     func showDetail(bookID: UUID) {
-        let vm = BookDetailViewModel(bookID: bookID, repository: deps.repository)
+        let vm = BookDetailViewModel(bookID: bookID, repository: deps.repository, generation: deps.generation)
         vm.onBack = { [weak self] in self?.router.pop() }
         vm.onDeleted = { [weak self] in self?.router.pop() }
         vm.onSummarize = { [weak self] in self?.startSummary(bookID: bookID, mode: .configure) }
         vm.onRead = { [weak self] in self?.startSummary(bookID: bookID, mode: .read) }
+        vm.onResume = { [weak self] in self?.startSummary(bookID: bookID, mode: .resume) }
         router.push(BookDetailView(viewModel: vm))
     }
 

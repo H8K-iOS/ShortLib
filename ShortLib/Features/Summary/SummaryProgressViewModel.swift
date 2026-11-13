@@ -1,25 +1,37 @@
 import Foundation
+import Combine
 
+/// Экран прогресса только наблюдает за `SummaryJob`: сама генерация живёт в `SummaryGenerationService`.
 @MainActor
 final class SummaryProgressViewModel: ObservableObject {
     enum StepState { case done, active, waiting }
 
     @Published private(set) var progress = SummaryProgress(stage: .loading, done: 0, total: 1)
     @Published private(set) var errorMessage: String?
+    /// Сколько глав уже можно читать.
+    @Published private(set) var readyChapters = 0
 
     var onCompleted: (() -> Void)?
     var onMinimize: (() -> Void)?
     var onCancel: (() -> Void)?
+    /// «Начать читать», пока остальные главы готовятся.
+    var onStartReading: (() -> Void)?
 
     let preset: SummaryPreset
-    private var book: Book
-    private let deps: AppDependencies
-    private var task: Task<Void, Never>?
+    private let job: SummaryJob
+    private let service: SummaryGenerationService
+    private var cancellables: Set<AnyCancellable> = []
 
-    init(book: Book, preset: SummaryPreset, deps: AppDependencies) {
-        self.book = book
-        self.preset = preset
-        self.deps = deps
+    init(job: SummaryJob, service: SummaryGenerationService) {
+        self.job = job
+        self.preset = job.preset
+        self.service = service
+
+        job.$progress.assign(to: &$progress)
+        job.$readyChapters.assign(to: &$readyChapters)
+        job.$state
+            .sink { [weak self] state in self?.handle(state) }
+            .store(in: &cancellables)
     }
 
     /// Этап связей показываем, только если спойлеры разрешены.
@@ -38,6 +50,12 @@ final class SummaryProgressViewModel: ObservableObject {
         }
     }
 
+    /// Можно открыть читалку, не дожидаясь конца.
+    var canStartReading: Bool { readyChapters > 0 && job.isRunning }
+
+    /// Оставшееся время, секунды; `nil`, пока оценки нет (меньше двух готовых глав в этом запуске).
+    var estimatedRemaining: TimeInterval? { job.estimatedRemaining }
+
     func state(of stage: SummaryProgress.Stage) -> StepState {
         if stage.rawValue < progress.stage.rawValue { return .done }
         if stage == progress.stage { return progress.done >= progress.total && stage == .overview ? .done : .active }
@@ -55,66 +73,27 @@ final class SummaryProgressViewModel: ObservableObject {
 
     // MARK: - Actions
 
+    /// «Повторить» после ошибки: продолжает с последней сохранённой главы.
     func start() {
         errorMessage = nil
-        task?.cancel()
-        task = Task { [weak self] in await self?.run() }
+        service.start(bookID: job.bookID, preset: preset)
     }
 
     func minimize() { onMinimize?() }
 
+    func startReading() { onStartReading?() }
+
     func cancel() {
-        task?.cancel()
+        service.cancel(bookID: job.bookID)
         onCancel?()
     }
 
-    // MARK: - Pipeline
-
-    private func run() async {
-        do {
-            try await loadMissingChapters()
-
-            update(SummaryProgress(stage: .cleaning, done: 1, total: 1))
-
-            let engine = deps.makeSummaryEngine()
-            let summary = try await engine.summarize(book: book, preset: preset) { [weak self] p in
-                Task { @MainActor in self?.update(p) }
-            }
-            book.summary = summary
-            deps.repository.upsert(book)
-            update(SummaryProgress(stage: .overview, done: 1, total: 1))
-            onCompleted?()
-        } catch is CancellationError {
-            // Пользователь отменил — ничего не сохраняем.
-        } catch {
-            errorMessage = error.localizedDescription
+    private func handle(_ state: SummaryJob.State) {
+        switch state {
+        case .running: errorMessage = nil
+        case .failed(let message): errorMessage = message
+        case .completed: onCompleted?()
+        case .cancelled: break
         }
-    }
-
-    /// Главы веб-новелл загружаются по одной, чтобы не перегружать сайт и устройство.
-    private func loadMissingChapters() async throws {
-        let missing = book.chapters.filter { preset.chapterRange.contains($0.index) && !$0.isLoaded && $0.url != nil }
-        update(SummaryProgress(stage: .loading, done: 0, total: max(1, missing.count)))
-        guard !missing.isEmpty else {
-            update(SummaryProgress(stage: .loading, done: 1, total: 1))
-            return
-        }
-        for (i, chapter) in missing.enumerated() {
-            try Task.checkCancellation()
-            guard let url = chapter.url else { continue }
-            let text = try await deps.scraper.fetchChapterText(url)
-            if let idx = book.chapters.firstIndex(where: { $0.index == chapter.index }) {
-                book.chapters[idx].text = text
-            }
-            update(SummaryProgress(stage: .loading, done: i + 1, total: missing.count))
-            if (i + 1) % 10 == 0 { deps.repository.upsert(book) } // кешируем загруженное
-        }
-        deps.repository.upsert(book)
-    }
-
-    private func update(_ p: SummaryProgress) {
-        // Не откатываемся назад, если обновления пришли не по порядку.
-        guard p.fraction >= progress.fraction || p.stage != progress.stage else { return }
-        progress = p
     }
 }

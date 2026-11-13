@@ -25,7 +25,35 @@ struct SummaryProgressView: View {
                                  title: viewModel.percentText,
                                  subtitle: viewModel.ringSubtitle)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, DS.Space.s)
+                        .padding(.top, DS.Space.s)
+
+                    // Сколько ждать и сколько глав готово.
+                    VStack(spacing: 2) {
+                        Text(WaitTimeText.text(viewModel.estimatedRemaining)).font(DS.Font.headline)
+                        Text("Готово \(viewModel.readyChapters) из \(RussianPlural.chapters(viewModel.chaptersInRange))")
+                            .font(DS.Font.caption.monospacedDigit()).foregroundColor(DS.Color.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .combine)
+
+                    if viewModel.canStartReading {
+                        HStack(alignment: .top, spacing: DS.Space.m) {
+                            Image(systemName: "book")
+                                .font(DS.Font.headline).foregroundColor(DS.Color.ink)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(readyRangeText).font(DS.Font.headline)
+                                Text("Можно читать — остальные главы появятся сами.")
+                                    .font(DS.Font.caption).foregroundColor(DS.Color.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(DS.Space.m)
+                        .background(DS.Color.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+                        .accessibilityElement(children: .combine)
+                        .transition(.opacity)
+                    }
 
                     VStack(spacing: 0) {
                         ForEach(viewModel.stages, id: \.self) { stage in
@@ -50,9 +78,22 @@ struct SummaryProgressView: View {
             FooterBar {
                 TextLinkButton(title: "Отменить", action: viewModel.cancel)
             } trailing: {
-                SecondaryButton(title: "Свернуть", action: viewModel.minimize)
+                // Как только готова первая глава, главное действие — читать; свернуть можно стрелкой вверху.
+                if viewModel.canStartReading {
+                    PrimaryButton(title: "Начать читать", action: viewModel.startReading)
+                } else {
+                    SecondaryButton(title: "Свернуть", action: viewModel.minimize)
+                }
             }
         }
+        .animation(DS.Motion.respecting(DS.Motion.standard), value: viewModel.canStartReading)
+    }
+
+    /// «Глава 1 готова» / «Главы 1–8 готовы».
+    private var readyRangeText: String {
+        let first = viewModel.preset.chapterRange.lowerBound
+        let last = first + viewModel.readyChapters - 1
+        return viewModel.readyChapters == 1 ? "Глава \(first) готова" : "Главы \(first)–\(last) готовы"
     }
 }
 

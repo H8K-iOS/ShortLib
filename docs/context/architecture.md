@@ -22,7 +22,18 @@ AppCoordinator ── UITabBarController
 ```
 - `Router` оборачивает UINavigationController: SwiftUI-экраны через UIHostingController, системная навбар скрыта, свайп назад работает, `onPop`-колбэки завершают дочерние координаторы
 - ViewModel сообщает о переходах замыканиями (`onSelectBook`, `onCreate`, `onBack`…) и не знает про UIKit
-- `SummaryCoordinator` держит `SummaryProgressViewModel`, пока идёт генерация, даже если экран свёрнут
+- Генерация пересказа живёт в `SummaryGenerationService` (`deps.generation`), а не в экранах (решено 2026-11-13):
+  - один `SummaryJob` на книгу (`ObservableObject`: `progress`, `state`, `readyChapters`, `estimatedRemaining`); `runningBookIDs` — для бейджей;
+  - `start(bookID:preset:)` возвращает уже идущую задачу с тем же пресетом; частичный пересказ с другим пресетом сбрасывается;
+    `resume(bookID:)` продолжает с `Book.partialSummary`; `cancel` оставляет готовые главы;
+  - после каждой главы движок вызывает `onPartial`, и сервис сохраняет `Book.partialSummary` (всегда поверх свежей копии книги из репозитория).
+    Готовый `Summary` удаляет partial. Ошибка движка (в т. ч. `freeQuotaExceeded` посреди книги) оставляет partial — «Продолжить пересказ»
+    со своим ключом идёт с `partial.preset` (не с новым пресетом из настроек). Урезанный `Summary` тоже не удаляет partial (страховка).
+    Поздние `onPartial` после завершения или отмены игнорируются. Все главы диапазона загружаются до вызова движка, иначе в partial будет дыра;
+  - экран прогресса, читалка и карточка книги только наблюдают за задачей; при уходе с экрана координатор завершается, а генерация продолжается;
+  - приложение свернули: `beginBackgroundTask` (~30 с) даёт дописать и сохранить главу. Если сеть оборвалась из-за остановки iOS,
+    при возврате задача сама продолжается с сохранённой главы (один раз). После перезапуска — `canResume` и кнопка «Продолжить пересказ»
+    (`SummaryCoordinator.Mode.resume`). Фоновый режим на всю книгу не обещаем.
 
 ## Структура
 ```
@@ -32,7 +43,7 @@ ShortLib/
 ├─ Features/       Library, Import, Summary, Summaries, Profile — View + ViewModel
 ├─ Domain/         Book, Chapter, Summary (+SummaryPreset, DetailLevel, SummaryProgress), SampleData
 ├─ Services/       BookRepository, ZipReader, EPUBParser, HTMLText, WebNovelScraper,
-│                  SummaryEngine (Extractive), Preferences, LLM/ (AnthropicClient, KeychainStore,
+│                  SummaryEngine (Extractive), SummaryGenerationService, Preferences, LLM/ (AnthropicClient, KeychainStore,
 │                  LLMSummaryEngine, Prompts)
 ├─ DesignSystem/   DS + Components
 └─ Resources/      Assets.xcassets, Info.plist

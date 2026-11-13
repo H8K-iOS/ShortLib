@@ -4,23 +4,47 @@ import Combine
 @MainActor
 final class BookDetailViewModel: ObservableObject {
     @Published private(set) var book: Book?
+    /// Для книги сейчас идёт пересказ.
+    @Published private(set) var isGenerating = false
 
     var onBack: (() -> Void)?
     var onSummarize: (() -> Void)?
     var onRead: (() -> Void)?
     var onDeleted: (() -> Void)?
+    /// «Продолжить пересказ» (прерван iOS или ошибкой) или вернуться к экрану прогресса идущего пересказа.
+    var onResume: (() -> Void)?
 
     private let bookID: UUID
     private let repository: BookRepositoryProtocol
+    private let generation: SummaryGenerationService
 
-    init(bookID: UUID, repository: BookRepositoryProtocol) {
+    init(bookID: UUID, repository: BookRepositoryProtocol, generation: SummaryGenerationService) {
         self.bookID = bookID
         self.repository = repository
+        self.generation = generation
         repository.booksPublisher
             .map { $0.first { $0.id == bookID } }
             .receive(on: DispatchQueue.main)
             .assign(to: &$book)
+        generation.$runningBookIDs
+            .map { $0.contains(bookID) }
+            .removeDuplicates()
+            .assign(to: &$isGenerating)
     }
+
+    /// Есть сохранённый частичный пересказ, а задача не идёт — показать «Продолжить пересказ».
+    var canResume: Bool { !isGenerating && book?.partialSummary != nil }
+
+    /// «Готово 12 из 33 глав» для частичного пересказа.
+    var partialProgressText: String? {
+        guard let partial = book?.partialSummary else { return nil }
+        return "Готово \(partial.chapters.count) из \(partial.preset.chapterRange.count) глав"
+    }
+
+    /// Читать можно и частичный пересказ.
+    var canRead: Bool { book?.summary != nil || !(book?.partialSummary?.chapters.isEmpty ?? true) }
+
+    func resume() { onResume?() }
 
     var originalReadingTime: String {
         guard let book else { return "—" }
@@ -41,6 +65,7 @@ final class BookDetailViewModel: ObservableObject {
     func read() { onRead?() }
 
     func delete() {
+        generation.cancel(bookID: bookID)
         repository.delete(id: bookID)
         onDeleted?()
     }

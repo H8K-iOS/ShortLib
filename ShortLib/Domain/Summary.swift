@@ -127,6 +127,20 @@ struct ChapterSummary: Identifiable, Codable, Hashable {
     var id: Int { index }
 }
 
+/// Частично готовый пересказ: главы по порядку от начала диапазона, без пропусков.
+/// Нужен, чтобы читать готовые главы во время пересказа и продолжить его после перезапуска.
+struct PartialSummary: Codable, Hashable, Sendable {
+    let preset: SummaryPreset
+    /// Готовые главы строго по порядку, начиная с `preset.chapterRange.lowerBound`.
+    let chapters: [ChapterSummary]
+    /// «Память сюжета» после последней готовой главы — с ней движок продолжит со следующей.
+    let memory: String
+    let updatedAt: Date
+
+    /// Индекс следующей главы, которую нужно пересказать.
+    var nextChapterIndex: Int { (chapters.last?.index ?? preset.chapterRange.lowerBound - 1) + 1 }
+}
+
 struct CharacterNote: Identifiable, Codable, Hashable {
     let name: String
     let note: String

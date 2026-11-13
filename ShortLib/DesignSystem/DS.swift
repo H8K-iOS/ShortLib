@@ -19,6 +19,8 @@ extension DS {
         static let accentSoft  = SwiftUI.Color("AccentSoft")
         static let onAccent    = SwiftUI.Color("OnAccent")
         static let ink         = SwiftUI.Color("Ink")
+        /// Длинный текст для чтения (пересказ главы) — на тон спокойнее заголовков.
+        static let inkSoft     = SwiftUI.Color("InkSoft")
         static let secondary   = SwiftUI.Color("Secondary")
         static let line        = SwiftUI.Color("Line")
         static let background  = SwiftUI.Color("Background")

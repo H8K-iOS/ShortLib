@@ -72,3 +72,18 @@ enum RussianPlural {
         return many
     }
 }
+
+/// Подпись оставшегося времени: «Примерно 12 мин», «Меньше минуты» или «Считаем время…».
+enum WaitTimeText {
+    static func text(_ seconds: TimeInterval?) -> String {
+        guard let seconds else { return "Считаем время…" }
+        if seconds < 60 { return "Меньше минуты" }
+        return "Примерно \(Int((seconds / 60).rounded())) мин"
+    }
+
+    /// Короткая форма для бейджей: «≈ 12 мин», «< 1 мин»; `nil`, пока оценки нет.
+    static func short(_ seconds: TimeInterval?) -> String? {
+        guard let seconds else { return nil }
+        return seconds < 60 ? "< 1 мин" : "≈ \(Int((seconds / 60).rounded())) мин"
+    }
+}

@@ -3,9 +3,33 @@ import NaturalLanguage
 
 protocol SummaryEngine {
     /// Пересказывает главы из `preset.chapterRange`. Тексты глав должны быть уже загружены.
+    /// - `resume`: частичный пересказ того же пресета — готовые главы пропускаются, работа продолжается
+    ///   со следующей главы с сохранённой «памятью сюжета». Другой пресет или битые данные игнорируются.
+    /// - `onPartial`: вызывается после каждой готовой главы; главы строго по порядку от начала диапазона, без пропусков.
     func summarize(book: Book,
                    preset: SummaryPreset,
-                   progress: @escaping @Sendable (SummaryProgress) -> Void) async throws -> Summary
+                   resume: PartialSummary?,
+                   progress: @escaping @Sendable (SummaryProgress) -> Void,
+                   onPartial: @escaping @Sendable (PartialSummary) -> Void) async throws -> Summary
+}
+
+extension SummaryEngine {
+    /// Старая сигнатура: без продолжения и без промежуточных результатов.
+    func summarize(book: Book,
+                   preset: SummaryPreset,
+                   progress: @escaping @Sendable (SummaryProgress) -> Void) async throws -> Summary {
+        try await summarize(book: book, preset: preset, resume: nil, progress: progress, onPartial: { _ in })
+    }
+
+    /// Готовые главы из `resume`, если он подходит к этому пресету: тот же пресет и главы подряд от начала диапазона.
+    func validResume(_ resume: PartialSummary?, for preset: SummaryPreset) -> PartialSummary? {
+        guard let resume, resume.preset == preset, !resume.chapters.isEmpty else { return nil }
+        for (offset, chapter) in resume.chapters.enumerated()
+        where chapter.index != preset.chapterRange.lowerBound + offset || !preset.chapterRange.contains(chapter.index) {
+            return nil
+        }
+        return resume
+    }
 }
 
 /// Локальный экстрактивный пересказ: выбирает самые «весомые» предложения каждой главы.
@@ -15,16 +39,22 @@ struct ExtractiveSummaryEngine: SummaryEngine {
 
     func summarize(book: Book,
                    preset: SummaryPreset,
-                   progress: @escaping @Sendable (SummaryProgress) -> Void) async throws -> Summary {
+                   resume: PartialSummary?,
+                   progress: @escaping @Sendable (SummaryProgress) -> Void,
+                   onPartial: @escaping @Sendable (PartialSummary) -> Void) async throws -> Summary {
         let chapters = book.chapters.filter { preset.chapterRange.contains($0.index) }
+        let resumed = validResume(resume, for: preset)
 
         // nonisolated async: выполняется вне главного потока, отмена задачи пробрасывается.
-        var result: [ChapterSummary] = []
-        for (i, chapter) in chapters.enumerated() {
+        var result: [ChapterSummary] = resumed?.chapters ?? []
+        let startIndex = resumed?.nextChapterIndex ?? preset.chapterRange.lowerBound
+        progress(SummaryProgress(stage: .summarizing, done: result.count, total: chapters.count))
+        for (i, chapter) in chapters.enumerated() where chapter.index >= startIndex {
             try Task.checkCancellation()
             await Task.yield()
             let text = Self.summarize(text: chapter.text, ratio: preset.ratio, focus: preset.focus)
             result.append(ChapterSummary(index: chapter.index, title: chapter.title, text: text))
+            onPartial(PartialSummary(preset: preset, chapters: result, memory: "", updatedAt: Date()))
             progress(SummaryProgress(stage: .summarizing, done: i + 1, total: chapters.count))
         }
 

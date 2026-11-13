@@ -24,6 +24,16 @@ final class AppDependencies {
     /// Последний известный остаток бесплатного бюджета; `nil` — ещё не загружен или прокси выключен.
     private(set) var freeQuota: FreeQuota?
 
+    /// Задачи пересказа живут здесь, а не в экранах: уход с экрана генерацию не обрывает.
+    private(set) lazy var generation: SummaryGenerationService = {
+        let service = SummaryGenerationService(repository: repository, scraper: scraper,
+                                               engineFactory: { [unowned self] in self.makeSummaryEngine() })
+        service.onJobFinished = { [unowned self] _ in
+            Task { await self.refreshFreeQuota() }
+        }
+        return service
+    }()
+
     init(repository: BookRepositoryProtocol = BookRepository(),
          epubParser: EPUBParsing = EPUBParser(),
          scraper: WebNovelScraping = WebNovelScraper(),

@@ -52,7 +52,10 @@ struct BookDetailView: View {
                     VStack(alignment: .leading, spacing: DS.Space.m) {
                         fact("square.stack", viewModel.loadedChaptersText)
                         fact("clock", "Оригинал \(viewModel.originalReadingTime)")
-                        if let summary = book.summary {
+                        if let progress = viewModel.partialProgressText {
+                            fact("hourglass", viewModel.isGenerating ? "Пересказываем · \(progress.lowercased())"
+                                                                     : "Пересказ остановлен · \(progress.lowercased())")
+                        } else if let summary = book.summary {
                             fact("doc.text", "Пересказ: \(summary.preset.level.title.lowercased()), ≈ \(summary.readingMinutes) мин")
                         }
                     }
@@ -84,7 +87,27 @@ struct BookDetailView: View {
 
     @ViewBuilder
     private func footer(_ book: Book) -> some View {
-        if let summary = book.summary {
+        if viewModel.isGenerating {
+            // Пересказ идёт в фоне: вернуться к прогрессу или читать готовые главы.
+            FooterBar {
+                if viewModel.canRead {
+                    TextLinkButton(title: "Читать готовое", action: viewModel.read)
+                } else {
+                    Text("Пересказываем…").font(DS.Font.headline)
+                }
+            } trailing: {
+                PrimaryButton(title: "Открыть прогресс", action: viewModel.resume)
+            }
+        } else if viewModel.canResume {
+            // Пересказ остановился (ошибка, отмена, iOS) — готовые главы сохранены.
+            FooterBar {
+                if viewModel.canRead {
+                    TextLinkButton(title: "Читать готовое", action: viewModel.read)
+                }
+            } trailing: {
+                PrimaryButton(title: "Продолжить пересказ", action: viewModel.resume)
+            }
+        } else if let summary = book.summary {
             FooterBar {
                 TextLinkButton(title: "Пересказать заново", action: viewModel.summarize)
             } trailing: {

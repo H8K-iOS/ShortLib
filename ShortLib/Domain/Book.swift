@@ -10,6 +10,8 @@ struct Book: Identifiable, Codable, Hashable {
     var chapters: [Chapter]
     var coverStyle: Int
     var summary: Summary?
+    /// Пересказ в процессе: готовые главы и «память сюжета». Удаляется, когда готов полный `summary`.
+    var partialSummary: PartialSummary?
     var addedAt: Date
 
     init(id: UUID = UUID(),
@@ -21,6 +23,7 @@ struct Book: Identifiable, Codable, Hashable {
          chapters: [Chapter],
          coverStyle: Int = Int.random(in: 0..<4),
          summary: Summary? = nil,
+         partialSummary: PartialSummary? = nil,
          addedAt: Date = Date()) {
         self.id = id
         self.title = title
@@ -31,6 +34,7 @@ struct Book: Identifiable, Codable, Hashable {
         self.chapters = chapters
         self.coverStyle = coverStyle
         self.summary = summary
+        self.partialSummary = partialSummary
         self.addedAt = addedAt
     }
 

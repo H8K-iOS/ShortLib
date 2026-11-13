@@ -126,6 +126,7 @@
 			); path = Summaries; sourceTree = "<group>"; };
 		609874F33224C0C09F1FEE42 /* Services */ = {isa = PBXGroup; children = (
 				86EBFE7FEED864AF7FBD048B,
+				B2E0F3D4C5B6A79899AA0011,
 				CDDABA0B38F25D09728C5CE5,
 				C063EC80926767F2DE96E232,
 				2DFA5FE9BB60420264388B6A,
@@ -186,6 +187,7 @@
 				F206F0B72B3DCD859F7F54AC,
 				F35BD55E5D9D86430A9AA4C4,
 				D5AE7A1E886B3B4B863FC9B8,
+				B2E0F3D4C5B6A79899AA0022,
 				A923DAB8AB3DAD1CA2285D73,
 				B5D04A13D02BF6CC28A1D631,
 				818F23B0434794D3C91E0F35,
@@ -203,6 +205,7 @@
 		818F23B0434794D3C91E0F35 /* AnthropicClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005688CE401C4D4E5A4CBC59; };
 		A1F0E2D3C4B5A69788990022 /* FreeProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F0E2D3C4B5A69788990011; };
 		86EBFE7FEED864AF7FBD048B /* BookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookRepository.swift; sourceTree = "<group>"; };
+		B2E0F3D4C5B6A79899AA0011 /* SummaryGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryGenerationService.swift; sourceTree = "<group>"; };
 		877808E57D9CF905669473C9 /* Prompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ED7528F61A7BBD74A107D6; };
 		8814FDE4088CA2B391E2BF2E /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		887A6F90336FF23D95C3914B /* Resources */ = {isa = PBXGroup; children = (
@@ -332,6 +335,7 @@
 			); path = App; sourceTree = "<group>"; };
 		D2614F178CF0F3214B8C38BF /* SummaryReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryReaderViewModel.swift; sourceTree = "<group>"; };
 		D5AE7A1E886B3B4B863FC9B8 /* BookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EBFE7FEED864AF7FBD048B; };
+		B2E0F3D4C5B6A79899AA0022 /* SummaryGenerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E0F3D4C5B6A79899AA0011; };
 		D7F444B1002A9DF2A103E6EE /* ZipReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZipReader.swift; sourceTree = "<group>"; };
 		D9D3A25B05142705F430E4F0 /* ImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FDE0E56FA4D8AE786C55FA9; };
 		DB2FD67688383B611B04C284 /* LLMSummaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24CFE31D867C30AC9D52447E; };

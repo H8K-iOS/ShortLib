@@ -27,7 +27,9 @@ struct LibraryView: View {
                 } else {
                     LazyVStack(spacing: DS.Space.xl) {
                         ForEach(viewModel.visibleBooks) { book in
-                            Button { viewModel.select(book) } label: { BookCard(book: book) }
+                            Button { viewModel.select(book) } label: {
+                                BookCard(book: book, isGenerating: viewModel.isGenerating(book))
+                            }
                                 .buttonStyle(PressScaleStyle())
                         }
                     }
@@ -41,6 +43,7 @@ struct LibraryView: View {
 
 struct BookCard: View {
     let book: Book
+    var isGenerating = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s) {
@@ -48,7 +51,7 @@ struct BookCard: View {
                 .frame(height: 220)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
                 .overlay(alignment: .topLeading) {
-                    StatusBadge(text: book.summary == nil ? "\(book.chapters.count) глав" : "Пересказ готов")
+                    StatusBadge(text: badgeText, systemImage: isGenerating ? "hourglass" : nil)
                         .padding(DS.Space.m)
                 }
 
@@ -63,6 +66,16 @@ struct BookCard: View {
         }
         .foregroundColor(DS.Color.ink)
         .multilineTextAlignment(.leading)
+    }
+
+    /// «Пересказываем · 12 из 33», «Готово 12 из 33», «Пересказ готов» или число глав.
+    private var badgeText: String {
+        if let partial = book.partialSummary {
+            let progress = "\(partial.chapters.count) из \(partial.preset.chapterRange.count)"
+            return isGenerating ? "Пересказываем · \(progress)" : "Готово \(progress)"
+        }
+        if isGenerating { return "Пересказываем" }
+        return book.summary == nil ? "\(book.chapters.count) глав" : "Пересказ готов"
     }
 
     private var meta: String {

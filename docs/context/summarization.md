@@ -18,6 +18,12 @@
 4. Спойлеры разрешены → второй проход: глава + 2 предыдущих + 3 следующих → `<links>` (1–3 предложения или «нет»), параллельно по 3 запроса.
 5. Сводка: если пересказов > 12 000 слов — арки по 15 глав (`<arc>`), затем `<overview>` + `<characters>` («Имя — описание»).
 
+6. **Чтение во время пересказа (решено 2026-11-13).** `SummaryEngine.summarize(book:preset:resume:progress:onPartial:)`:
+   после каждой главы — `onPartial(PartialSummary)` (главы подряд от начала диапазона + память сюжета);
+   `resume` того же пресета продолжает со следующей главы (`validResume` отбрасывает чужой пресет и главы с пропусками).
+   Связи и сводка — только в конце. Старая сигнатура без `resume`/`onPartial` осталась в extension.
+   Хранение, продолжение после перезапуска — ios-architect (`Book.partialSummary`, `SummaryGenerationService`); ETA и «Начать читать» — ui-designer.
+
 - Промпты — `Services/LLM/Prompts.swift`, разбор — `TagParser`.
 - Модели: главы `claude-haiku-5-5`; сводка `claude-sonnet-5-5` в режиме «Качество», Haiku в режиме «Быстро».
 - `AnthropicClient`: Messages API, `anthropic-version: 2023-06-01`, ретраи на 429/5xx/529 (2, 4, 8, 16 c, retry-after), понятные ошибки на русском.
@@ -78,9 +84,8 @@
 ### Клиент в бесплатном режиме (сделано)
 - `SummarySettingsViewModel(freeChaptersLeft:)` — из `deps.freeQuota.chaptersLeft` при `engineKind == .freeProxy`;
   выбор глав ограничен `min(5, chaptersLeft)`, начиная с первой; заголовок «бесплатно, осталось N из 5 глав».
-- `LLMSummaryEngine`: при `freeQuotaExceeded` посреди книги (уже есть готовые главы) — стоп, связи пропускаются,
-  сводка — если хватит бюджета; `preset.chapterRange` урезается до готовых глав, в начало сводки — пояснение
-  «Бесплатный лимит закончился… добавьте ключ». Если лимит кончился на первой главе — обычная ошибка с текстом сервера.
+- `LLMSummaryEngine`: при `freeQuotaExceeded` (и любой другой ошибке) — ошибка пробрасывается; готовые главы уже лежат
+  в `Book.partialSummary`, их можно читать, а со своим ключом — «Продолжить пересказ» с того же места (тот же пресет).
 
 ## Загрузка текста
 - EPUB: `ZipReader` (Apple Compression, deflate) → `container.xml` → OPF (manifest/spine) → XHTML → `HTMLText.plainText`. Главы < 40 слов пропускаются.
