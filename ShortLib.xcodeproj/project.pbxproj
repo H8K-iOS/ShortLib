@@ -6,6 +6,7 @@
 	objectVersion = 56;
 	objects = {
 		005688CE401C4D4E5A4CBC59 /* AnthropicClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicClient.swift; sourceTree = "<group>"; };
+		A1F0E2D3C4B5A69788990011 /* FreeProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeProxy.swift; sourceTree = "<group>"; };
 		0101BFDDB9C5FDEB8EDFD46F /* Chips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081D676E2F6C8C4FC454AADE; };
 		03CDC534B2E95FD928A42E88 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		03E94B90BC7E0E745B65B05C /* WebNovelScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebNovelScraper.swift; sourceTree = "<group>"; };
@@ -63,6 +64,7 @@
 		2DAE936E6FC7A42AEDCC3350 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEEC7FAEC7A5ACD39AD94B85; };
 		2DFA5FE9BB60420264388B6A /* LLM */ = {isa = PBXGroup; children = (
 				005688CE401C4D4E5A4CBC59,
+				A1F0E2D3C4B5A69788990011,
 				4B608F5F44E9AFD96ED93586,
 				24CFE31D867C30AC9D52447E,
 				53ED7528F61A7BBD74A107D6,
@@ -187,6 +189,7 @@
 				A923DAB8AB3DAD1CA2285D73,
 				B5D04A13D02BF6CC28A1D631,
 				818F23B0434794D3C91E0F35,
+				A1F0E2D3C4B5A69788990022,
 				1E57B58B7C4B2412251C4C95,
 				DB2FD67688383B611B04C284,
 				877808E57D9CF905669473C9,
@@ -198,6 +201,7 @@
 		7B260015A2E55FBED08DBF37 /* SummaryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryCoordinator.swift; sourceTree = "<group>"; };
 		7C3F52724AF4B2272829ED7F /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		818F23B0434794D3C91E0F35 /* AnthropicClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005688CE401C4D4E5A4CBC59; };
+		A1F0E2D3C4B5A69788990022 /* FreeProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F0E2D3C4B5A69788990011; };
 		86EBFE7FEED864AF7FBD048B /* BookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookRepository.swift; sourceTree = "<group>"; };
 		877808E57D9CF905669473C9 /* Prompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ED7528F61A7BBD74A107D6; };
 		8814FDE4088CA2B391E2BF2E /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };

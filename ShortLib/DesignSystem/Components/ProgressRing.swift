@@ -38,3 +38,37 @@ struct LinearProgress: View {
         .animation(DS.Motion.respecting(DS.Motion.progress), value: progress)
     }
 }
+
+/// Остаток бесплатных глав: «Бесплатные главы  3 из 5» и полоска.
+struct QuotaMeter: View {
+    let left: Int
+    let total: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Бесплатные главы").font(DS.Font.callout)
+                Spacer()
+                Text("\(left) из \(total)").font(DS.Font.headline.monospacedDigit())
+            }
+            LinearProgress(progress: total > 0 ? Double(left) / Double(total) : 0)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Бесплатно осталось \(RussianPlural.chapters(left)) из \(total)")
+    }
+}
+
+/// Склонение счётчиков в подписях интерфейса.
+enum RussianPlural {
+    static func chapters(_ count: Int) -> String {
+        "\(count) " + form(count, one: "глава", few: "главы", many: "глав")
+    }
+
+    static func form(_ count: Int, one: String, few: String, many: String) -> String {
+        let n = abs(count) % 100, last = n % 10
+        if (11...14).contains(n) { return many }
+        if last == 1 { return one }
+        if (2...4).contains(last) { return few }
+        return many
+    }
+}

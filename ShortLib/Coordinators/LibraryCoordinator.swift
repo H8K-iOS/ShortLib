@@ -4,6 +4,7 @@ import UIKit
 final class LibraryCoordinator: Coordinator {
     var children: [Coordinator] = []
     var onAddBook: (() -> Void)?
+    var onOpenProfile: (() -> Void)?
 
     private let router: Router
     private let deps: AppDependencies
@@ -32,6 +33,7 @@ final class LibraryCoordinator: Coordinator {
     private func startSummary(bookID: UUID, mode: SummaryCoordinator.Mode) {
         let flow = SummaryCoordinator(router: router, deps: deps, bookID: bookID, mode: mode)
         flow.onFinish = { [weak self, weak flow] in self?.remove(flow) }
+        flow.onOpenProfile = { [weak self] in self?.onOpenProfile?() }
         add(flow)
         flow.start()
     }

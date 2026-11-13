@@ -1,0 +1,23 @@
+name = "shortlib-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+# Ключ Anthropic — только секретом: npx wrangler secret put ANTHROPIC_API_KEY
+[vars]
+DEVICE_BUDGET = "270000"        # взвешенные токены на устройство (≈ 5 глав)
+DAILY_CAP_USD = "5"             # общий потолок расходов в сутки
+IP_REQUESTS_PER_MINUTE = "30"
+IP_DEVICES_PER_DAY = "3"
+
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+# SQLite-хранилище Durable Objects доступно на бесплатном тарифе Workers.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Ledger"]
+
+[observability]
+enabled = true

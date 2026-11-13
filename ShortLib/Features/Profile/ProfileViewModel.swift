@@ -9,6 +9,8 @@ final class ProfileViewModel: ObservableObject {
     @Published var keyInput = ""
     @Published private(set) var hasKey: Bool
     @Published private(set) var status: KeyStatus = .idle
+    /// Остаток бесплатных глав без ключа; `nil` — есть свой ключ или остаток ещё не известен.
+    @Published private(set) var freeChaptersLeft: Int?
 
     private let deps: AppDependencies
     private var task: Task<Void, Never>?
@@ -16,6 +18,20 @@ final class ProfileViewModel: ObservableObject {
     init(deps: AppDependencies) {
         self.deps = deps
         hasKey = deps.preferences.hasAPIKey
+        updateFreeChapters()
+    }
+
+    var freeChapterLimit: Int { SummarySettingsViewModel.freeChapterLimit }
+
+    /// Обновляет остаток бесплатных глав с сервера (при открытии Профиля).
+    func refreshQuota() async {
+        await deps.refreshFreeQuota()
+        updateFreeChapters()
+    }
+
+    private func updateFreeChapters() {
+        guard !hasKey, let quota = deps.freeQuota else { freeChaptersLeft = nil; return }
+        freeChaptersLeft = quota.isAvailable ? max(0, min(quota.chaptersLeft, freeChapterLimit)) : 0
     }
 
     var maskedKey: String {
@@ -39,6 +55,7 @@ final class ProfileViewModel: ObservableObject {
                 self?.keyInput = ""
                 self?.hasKey = true
                 self?.status = .saved
+                self?.updateFreeChapters()
             } catch {
                 self?.status = .failed(error.localizedDescription)
             }
@@ -49,5 +66,6 @@ final class ProfileViewModel: ObservableObject {
         deps.preferences.apiKey = nil
         hasKey = false
         status = .idle
+        task = Task { [weak self] in await self?.refreshQuota() }
     }
 }

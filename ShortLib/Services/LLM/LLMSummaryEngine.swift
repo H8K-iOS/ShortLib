@@ -33,40 +33,67 @@ struct LLMSummaryEngine: SummaryEngine {
         var results: [ChapterSummary] = []
         progress(SummaryProgress(stage: .summarizing, done: 0, total: chapters.count))
 
+        // Бесплатный лимит может закончиться посреди книги: тогда сохраняем готовые главы, а не теряем всё.
+        var quotaMessage: String?
+
         for (i, chapter) in chapters.enumerated() {
             try Task.checkCancellation()
             let target = preset.targetWords(forChapterWords: chapter.wordCount)
-            let (input, isNotes) = try await prepare(chapter, memory: memory, target: target, system: system)
+            do {
+                let (input, isNotes) = try await prepare(chapter, memory: memory, target: target, system: system)
 
-            // Запас: пересказ + скрытый разбор (≈ 400 токенов) + память сюжета (≈ 1 100).
-            let response = try await client.complete(
-                system: system,
-                prompt: Prompts.chapter(index: chapter.index, title: chapter.title, text: input, isNotes: isNotes,
-                                        level: preset.level, memory: memory, previousSummary: previous,
-                                        targetWords: target),
-                model: chapterModel,
-                maxTokens: tokens(forWords: target) + Self.analysisTokens + 1_100
-            )
-            let summary = TagParser.value("summary", in: response) ?? Self.stripService(response)
-            memory = TagParser.value("memory", in: response) ?? memory
-            previous = summary
-            results.append(ChapterSummary(index: chapter.index, title: chapter.title, text: summary))
-            progress(SummaryProgress(stage: .summarizing, done: i + 1, total: chapters.count))
+                // Запас: пересказ + скрытый разбор (≈ 400 токенов) + память сюжета (≈ 1 100).
+                let response = try await client.complete(
+                    system: system,
+                    prompt: Prompts.chapter(index: chapter.index, title: chapter.title, text: input, isNotes: isNotes,
+                                            level: preset.level, memory: memory, previousSummary: previous,
+                                            targetWords: target),
+                    model: chapterModel,
+                    maxTokens: tokens(forWords: target) + Self.analysisTokens + 1_100
+                )
+                let summary = TagParser.value("summary", in: response) ?? Self.stripService(response)
+                memory = TagParser.value("memory", in: response) ?? memory
+                previous = summary
+                results.append(ChapterSummary(index: chapter.index, title: chapter.title, text: summary))
+                progress(SummaryProgress(stage: .summarizing, done: i + 1, total: chapters.count))
+            } catch AnthropicClient.APIError.freeQuotaExceeded(let message) where !results.isEmpty {
+                quotaMessage = message
+                break
+            }
         }
 
-        // 2. Связи между главами (только если спойлеры разрешены)
-        if !preset.noSpoilers, results.count > 1 {
-            results = try await addConnections(to: results, system: system, progress: progress)
+        // 2. Связи между главами (только если спойлеры разрешены и бюджет не кончился)
+        if quotaMessage == nil, !preset.noSpoilers, results.count > 1 {
+            do {
+                results = try await addConnections(to: results, system: system, progress: progress)
+            } catch AnthropicClient.APIError.freeQuotaExceeded(let message) {
+                quotaMessage = message
+            }
         } else {
             progress(SummaryProgress(stage: .connecting, done: 1, total: 1))
         }
 
         // 3. Общая сводка и персонажи
         progress(SummaryProgress(stage: .overview, done: 0, total: 1))
-        let (overview, characters) = try await makeOverview(results, memory: memory, preset: preset, system: system)
+        var overview = ""
+        var characters: [CharacterNote] = []
+        do {
+            (overview, characters) = try await makeOverview(results, memory: memory, preset: preset, system: system)
+        } catch AnthropicClient.APIError.freeQuotaExceeded(let message) where !results.isEmpty {
+            // На сводку бюджета не хватило — читатель всё равно получает пересказы глав.
+            quotaMessage = quotaMessage ?? message
+        }
         progress(SummaryProgress(stage: .overview, done: 1, total: 1))
 
-        return Summary(preset: preset, overview: overview, chapters: results, createdAt: Date(),
+        var donePreset = preset
+        if let quotaMessage, let last = results.last {
+            donePreset.chapterRange = preset.chapterRange.lowerBound...last.index
+            let note = "Бесплатный лимит закончился: пересказаны главы \(donePreset.chapterRange.lowerBound)–\(last.index). "
+                + "Чтобы продолжить, добавьте ключ Claude API в Профиле."
+            overview = [note, overview.isEmpty ? quotaMessage : overview].joined(separator: "\n\n")
+        }
+
+        return Summary(preset: donePreset, overview: overview, chapters: results, createdAt: Date(),
                        characters: characters, engine: engineLabel)
     }
 

@@ -45,12 +45,27 @@ scripts/check-guidelines.sh   — Build Phase «Check Guidelines»
 - Bundle ID `com.shortlib.app`, deployment target 16.0, Swift 5, `ENABLE_USER_SCRIPT_SANDBOXING = NO` (для скрипта гайдлайнов)
 - `DEVELOPMENT_TEAM` в репо пустой; у пользователя локально выставлен свой Team — не коммитить.
 
+## Сервер-прокси (бесплатный лимит, 2026-11-13)
+- Код — `server/` (Cloudflare Worker, TypeScript), инструкция деплоя — `server/README.md`. Ключ Anthropic — `wrangler secret`, в репо его нет.
+- Счётчики — один класс Durable Object `Ledger` (SQLite, бесплатный тариф). Имя объекта задаёт роль:
+  `dev:<installId>` — бюджет устройства, `ip:<ip>:<дата>` — лимиты по IP (удаляется alarm'ом через 2 суток), `day:<дата>` — потолок в µ$.
+- Учёт во «взвешенных токенах»: вход (с кешем) + 5 × выход, это нормировка на цену входа Haiku. Устройству дают 270 000.
+  Перед запросом в Anthropic резервируется оценка (символы / 2.5 + 5 × max_tokens), после ответа списывается фактический `usage`.
+- iOS: `ProxyConfig.baseURL` берётся из Info.plist `ShortLibProxyURL` (пусто — прокси выключен); `InstallID` хранится в Keychain;
+  `LLMConfig.auth` — `.apiKey` или `.proxy`. Выбор движка — `AppDependencies.engineKind`: `.ownKey` / `.freeProxy` / `.extractive`.
+  Остаток (`freeQuota`) кешируется: обновляется при запуске, перед настройками пересказа (если ещё не загружен) и после пересказа.
+- Размышления модели выключены во всех запросах: Haiku 5.5 — `thinking: {type: "disabled"}`, Sonnet 5.5 — `{type: "between_tools"}` (`disabled` у него даёт 400). Прокси подставляет `disabled` сам и другие значения отклоняет. Ответ со `stop_reason: max_tokens` возвращается как есть.
+- Ошибки прокси: `APIError.freeQuotaExceeded` (402), `.serviceLimit` (daily_cap или долгий rate_limited), `.proxy`.
+  503 `daily_cap` не повторяется; `rate_limited` и `upstream_busy` повторяются, только если пауза ≤ 60 с.
+- Этап 2: App Attest (`X-ShortLib-Attest`) — после покупки Apple Developer.
+
 ## Git
 - Push в `main` напрямую (одиночный разработчик). Перед push — `git pull --rebase`.
 - Обновление на Mac: `git stash && git pull origin main && git stash pop`.
 
 ## Открытые задачи
 - Первая сборка в Xcode ещё не подтверждена
+- Прокси: Worker не прогонялся (`npm run typecheck`, `wrangler dev`); на этой машине нет Node
 - Нет unit-тестов (кандидаты: ZipReader/EPUBParser, TagParser, WebNovelScraper.extractChapterLinks, SummaryCostEstimate)
 - Фон: `BGProcessingTask` + локальное уведомление «Пересказ готов»
 - Share Extension для ссылок из Safari

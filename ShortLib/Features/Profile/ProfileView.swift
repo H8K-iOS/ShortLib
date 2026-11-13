@@ -12,6 +12,17 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: DS.Space.xl) {
                 Text("Профиль").font(DS.Font.largeTitle).padding(.top, DS.Space.l)
 
+                if let left = viewModel.freeChaptersLeft {
+                    SettingsGroup(title: "Бесплатный пересказ") {
+                        QuotaMeter(left: left, total: viewModel.freeChapterLimit)
+                        Text(left > 0
+                             ? "Бесплатные главы даются один раз на устройство. Дальше — свой ключ или подписка."
+                             : "Бесплатные главы закончились. Добавьте свой ключ ниже — подписка появится скоро.")
+                            .font(DS.Font.caption).foregroundColor(DS.Color.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 SettingsGroup(title: "Пересказ своими словами") {
                     Text("ShortLib использует Claude от Anthropic. Нужен ваш ключ API: запросы оплачиваются с вашего баланса в Anthropic, текст глав отправляется в Anthropic для обработки.")
                         .font(DS.Font.callout).foregroundColor(DS.Color.secondary)
@@ -109,5 +120,6 @@ struct ProfileView: View {
         // Пустое место под содержимым и прокрутка тоже закрывают клавиатуру.
         .background(DS.Color.background.ignoresSafeArea().onTapGesture { isKeyFieldFocused = false })
         .scrollDismissesKeyboard(.interactively)
+        .task { await viewModel.refreshQuota() }
     }
 }

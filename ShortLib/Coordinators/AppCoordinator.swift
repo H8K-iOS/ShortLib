@@ -10,6 +10,7 @@ final class AppCoordinator: NSObject, Coordinator {
     private let tabBarController = UITabBarController()
     private let addTabPlaceholder = UIViewController()
     private var library: LibraryCoordinator?
+    private let profileRouter = Router()
 
     init(window: UIWindow, deps: AppDependencies) {
         self.window = window
@@ -20,6 +21,7 @@ final class AppCoordinator: NSObject, Coordinator {
         let libraryRouter = Router()
         let library = LibraryCoordinator(router: libraryRouter, deps: deps)
         library.onAddBook = { [weak self] in self?.showImport() }
+        library.onOpenProfile = { [weak self] in self?.showProfile() }
         library.start()
         add(library)
         self.library = library
@@ -29,7 +31,6 @@ final class AppCoordinator: NSObject, Coordinator {
         summaries.start()
         add(summaries)
 
-        let profileRouter = Router()
         profileRouter.setRoot(ProfileView(viewModel: ProfileViewModel(deps: deps)))
 
         libraryRouter.navigationController.tabBarItem = item("Библиотека", "books.vertical")
@@ -49,9 +50,18 @@ final class AppCoordinator: NSObject, Coordinator {
         window.rootViewController = tabBarController
         window.tintColor = DS.UIColorToken.accent
         window.makeKeyAndVisible()
+
+        // Остаток бесплатных глав нужен заранее, чтобы выбрать движок пересказа без ожидания.
+        Task { [deps] in await deps.refreshFreeQuota() }
     }
 
     // MARK: - Flows
+
+    /// Вкладка «Профиль» (например, чтобы добавить свой ключ после бесплатного лимита).
+    private func showProfile() {
+        profileRouter.navigationController.popToRootViewController(animated: false)
+        tabBarController.selectedViewController = profileRouter.navigationController
+    }
 
     private func showImport() {
         let importer = ImportCoordinator(presenter: tabBarController, deps: deps)

@@ -7,6 +7,8 @@ final class SummaryCoordinator: Coordinator {
 
     var children: [Coordinator] = []
     var onFinish: (() -> Void)?
+    /// Пользователь хочет добавить свой ключ: родитель переключает на вкладку «Профиль».
+    var onOpenProfile: (() -> Void)?
 
     private let router: Router
     private let deps: AppDependencies
@@ -25,7 +27,16 @@ final class SummaryCoordinator: Coordinator {
 
     func start() {
         switch mode {
-        case .configure: showSettings()
+        case .configure:
+            if deps.engineKind == .extractive, deps.freeQuota == nil {
+                // Остаток бесплатных глав ещё не загружен (например, не было сети при запуске) — спросим сервер.
+                Task { [weak self] in
+                    await self?.deps.refreshFreeQuota()
+                    self?.showSettings()
+                }
+            } else {
+                showSettings()
+            }
         case .read: showReader(replacingTop: false)
         }
     }
@@ -35,10 +46,20 @@ final class SummaryCoordinator: Coordinator {
     private func showSettings() {
         guard let book = deps.repository.book(id: bookID) else { return finish() }
         let vm = SummarySettingsViewModel(book: book, defaults: deps.preferences,
-                                          usesLanguageModel: deps.usesLanguageModel)
+                                          usesLanguageModel: deps.usesLanguageModel,
+                                          freeChaptersLeft: deps.engineKind == .freeProxy
+                                              ? deps.freeQuota?.chaptersLeft : nil,
+                                          freeLimitReached: !deps.preferences.hasAPIKey
+                                              && deps.freeQuota?.isAvailable == false)
         vm.onClose = { [weak self] in
             self?.router.dismiss()
             self?.finish()
+        }
+        vm.onAddKey = { [weak self] in
+            self?.router.dismiss {
+                self?.onOpenProfile?()
+                self?.finish()
+            }
         }
         vm.onCreate = { [weak self] preset in
             self?.router.dismiss { self?.showProgress(preset: preset) }
@@ -53,6 +74,7 @@ final class SummaryCoordinator: Coordinator {
 
         vm.onCompleted = { [weak self] in
             guard let self else { return }
+            Task { [deps = self.deps] in await deps.refreshFreeQuota() }
             if self.isProgressVisible {
                 self.showReader(replacingTop: true)
             } else {

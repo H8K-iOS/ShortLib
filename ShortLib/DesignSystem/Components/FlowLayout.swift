@@ -46,3 +46,34 @@ struct SettingsGroup<Content: View>: View {
         }
     }
 }
+
+/// Карточка-объяснение: иконка, заголовок, текст и действия.
+/// Для пустых состояний, ошибок и ограничений (например, «Бесплатные главы закончились»).
+struct NoticeCard<Actions: View>: View {
+    let systemImage: String
+    let title: String
+    let message: String
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(spacing: DS.Space.m) {
+            Image(systemName: systemImage)
+                .font(DS.Font.icon)
+                .foregroundColor(DS.Color.secondary)
+                .accessibilityHidden(true)
+            VStack(spacing: DS.Space.xs) {
+                Text(title).font(DS.Font.headline)
+                Text(message)
+                    .font(DS.Font.callout)
+                    .foregroundColor(DS.Color.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            actions
+        }
+        .frame(maxWidth: .infinity)
+        .padding(DS.Space.l)
+        .dsCard()
+    }
+}
