@@ -78,3 +78,30 @@ struct StatusBadge: View {
         }
     }
 }
+
+/// Плитка-виджет с крупной цифрой: «37 / МИН / ПЕРЕСКАЗ».
+struct StatTile: View {
+    let value: String
+    var unit: String? = nil
+    let label: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.xs) {
+            Text(label).dsOverline()
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value).font(DS.Font.number).foregroundColor(DS.Color.ink)
+                if let unit {
+                    Text(unit).font(DS.Font.caption).foregroundColor(DS.Color.secondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.m)
+        .background(DS.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous).stroke(DS.Color.line, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+}

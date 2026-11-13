@@ -46,6 +46,13 @@ extension DS {
                            center: .center, startRadius: 0, endRadius: radius)
         }
 
+        /// Свет обложки: неподвижное свечение в тоне обложки книги.
+        static func coverGlow(style: Int, radius: CGFloat) -> RadialGradient {
+            let colors = covers[abs(style) % covers.count]
+            return RadialGradient(colors: [colors[0].opacity(0.55), colors[1].opacity(0.18), SwiftUI.Color.clear],
+                                  center: .center, startRadius: 0, endRadius: radius)
+        }
+
         /// Тёплая дуга прогресса: от коралла к персиковому.
         static let progressArc = AngularGradient(colors: [accent, glowWarm, glowSoft],
                                                  center: .center, startAngle: .degrees(0), endAngle: .degrees(360))
@@ -85,6 +92,8 @@ extension DS {
         static let label      = SwiftUI.Font.system(.footnote, design: .default, weight: .semibold)
         static let icon       = SwiftUI.Font.system(size: 22, weight: .regular)
         static let number     = SwiftUI.Font.system(.title, design: .default, weight: .heavy).monospacedDigit()
+        /// Служебные подписи «ГЛАВА 01 · 2 МИН»: мелкие заглавные с разрядкой — через `.dsOverline()`.
+        static let overline   = SwiftUI.Font.system(.caption2, design: .default, weight: .semibold).monospacedDigit()
     }
 
     enum UIFontToken {
@@ -149,5 +158,16 @@ extension View {
         self
             .background(DS.Color.background.ignoresSafeArea())
             .foregroundColor(DS.Color.ink)
+    }
+}
+
+extension View {
+    /// Служебная подпись: мелкие заглавные с разрядкой, вторичный цвет («33 ГЛАВЫ · EPUB»).
+    func dsOverline() -> some View {
+        self
+            .font(DS.Font.overline)
+            .textCase(.uppercase)
+            .tracking(0.8)
+            .foregroundColor(DS.Color.secondary)
     }
 }

@@ -13,6 +13,9 @@ struct PrimaryButton: View {
             Text(title)
                 .font(DS.Font.headline)
                 .foregroundColor(DS.Color.onAccent)
+                // Главная кнопка всегда в одну строку: сжимается соседний текст, а не она.
+                .lineLimit(1)
+                .fixedSize(horizontal: !isFullWidth, vertical: false)
                 .padding(.vertical, 14)
                 .padding(.horizontal, DS.Space.xl)
                 .frame(maxWidth: isFullWidth ? .infinity : nil)

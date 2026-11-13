@@ -24,19 +24,50 @@ struct BookDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.l) {
-                    BookCover(title: book.title, caption: book.source.kindTitle, style: book.coverStyle, showsText: false)
-                        .frame(height: 240)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous))
+                    // Свет обложки: книга в центре, за ней — неподвижное свечение в её тоне.
+                    ZStack {
+                        Circle()
+                            .fill(DS.Color.coverGlow(style: book.coverStyle, radius: 190))
+                            .frame(width: 380, height: 380)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                        BookCover(title: book.title, caption: book.source.kindTitle, style: book.coverStyle, showsText: false)
+                            .frame(width: 150, height: 210)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous)
+                                .stroke(DS.Color.line, lineWidth: 1))
+                            .dsElasticDrag(limit: 40)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 250)
 
-                    VStack(alignment: .leading, spacing: DS.Space.xs) {
-                        Text(book.title).font(DS.Font.largeTitle)
-                        Text("\(book.author) · \(book.source.kindTitle) · \(book.language)")
-                            .font(DS.Font.callout).foregroundColor(DS.Color.secondary)
+                    VStack(spacing: DS.Space.s) {
+                        Text(book.title).font(DS.Font.largeTitle).multilineTextAlignment(.center)
+                        Text("\(book.author) · \(book.source.kindTitle) · \(book.language)").dsOverline()
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // Главное о книге — плитками с крупными цифрами.
+                    HStack(spacing: DS.Space.s) {
+                        StatTile(value: "\(book.chapters.count)", label: "глав")
+                        StatTile(value: viewModel.originalReadingTime.replacingOccurrences(of: "≈ ", with: ""),
+                                 label: "оригинал")
+                        if let summary = book.summary {
+                            StatTile(value: "\(summary.readingMinutes)", unit: "мин", label: "пересказ")
+                        }
+                    }
+
+                    if let progress = viewModel.partialProgressText {
+                        Label(viewModel.isGenerating ? "Пересказываем · \(progress.lowercased())"
+                                                     : "Пересказ остановлен · \(progress.lowercased())",
+                              systemImage: "hourglass")
+                            .font(DS.Font.callout)
                     }
 
                     HStack(spacing: DS.Space.m) {
                         Text(String(book.source.hostTitle.prefix(1)).uppercased())
-                            .font(DS.Font.headline).foregroundColor(DS.Color.accent)
+                            .font(DS.Font.headline).foregroundColor(DS.Color.ink)
                             .frame(width: 40, height: 40)
                             .background(DS.Color.surface).clipShape(Circle())
                         VStack(alignment: .leading, spacing: 2) {
@@ -49,30 +80,33 @@ struct BookDetailView: View {
                     .overlay(alignment: .top) { Rectangle().fill(DS.Color.line).frame(height: 1) }
                     .overlay(alignment: .bottom) { Rectangle().fill(DS.Color.line).frame(height: 1) }
 
-                    VStack(alignment: .leading, spacing: DS.Space.m) {
-                        fact("square.stack", viewModel.loadedChaptersText)
-                        fact("clock", "Оригинал \(viewModel.originalReadingTime)")
-                        if let progress = viewModel.partialProgressText {
-                            fact("hourglass", viewModel.isGenerating ? "Пересказываем · \(progress.lowercased())"
-                                                                     : "Пересказ остановлен · \(progress.lowercased())")
-                        } else if let summary = book.summary {
-                            fact("doc.text", "Пересказ: \(summary.preset.level.title.lowercased()), ≈ \(summary.readingMinutes) мин")
+                    // Главы — блоком-виджетом с номерами «01, 02».
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Text("Главы").dsOverline()
+                            Spacer()
+                            Text(viewModel.loadedChaptersText).dsOverline()
                         }
-                    }
-
-                    VStack(alignment: .leading, spacing: DS.Space.s) {
-                        Text("Главы").font(DS.Font.title)
+                        .padding(.bottom, DS.Space.s)
                         ForEach(book.chapters.prefix(6)) { chapter in
                             HStack(spacing: DS.Space.m) {
-                                Text("\(chapter.index)").font(DS.Font.caption.monospacedDigit())
-                                    .foregroundColor(DS.Color.secondary).frame(width: 28, alignment: .leading)
+                                Text(String(format: "%02d", chapter.index)).dsOverline()
+                                    .frame(width: 24, alignment: .leading)
                                 Text(chapter.title).font(DS.Font.callout).lineLimit(1)
+                                Spacer(minLength: 0)
                             }
+                            .padding(.vertical, DS.Space.s)
+                            .overlay(alignment: .top) { Rectangle().fill(DS.Color.line).frame(height: 1) }
                         }
                         if book.chapters.count > 6 {
-                            Text("и ещё \(book.chapters.count - 6)").font(DS.Font.caption).foregroundColor(DS.Color.secondary)
+                            Text("и ещё \(book.chapters.count - 6)").dsOverline()
+                                .padding(.top, DS.Space.s)
                         }
                     }
+                    .padding(DS.Space.l)
+                    .background(DS.Color.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: DS.Radius.l, style: .continuous).stroke(DS.Color.line, lineWidth: 1))
                 }
                 .padding(.horizontal, DS.Space.l)
                 .padding(.bottom, DS.Space.xl)
