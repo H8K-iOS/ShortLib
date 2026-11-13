@@ -1,0 +1,56 @@
+# ShortLib — код и архитектура
+
+Общий контекст — `CLAUDE.md` в корне репозитория.
+
+## Зона ответственности
+Структура проекта, координаторы, ViewModel, сервисы, хранение данных, ошибки сборки Xcode, git/GitHub, CI.
+
+## Ограничения iOS 16
+- ViewModel — `@MainActor final class: ObservableObject` + `@Published` (не `@Observable`, это iOS 17)
+- Хранение — JSON в Documents (`BookRepository`); не SwiftData (iOS 17). Core Data — возможная замена за протоколом `BookRepositoryProtocol`
+- Можно: `Layout` (FlowLayout), `ShareLink`, `UISheetPresentationController` detents, async/await
+- Не использовать `MainActor.assumeIsolated` и прочие API iOS 17+
+
+## Навигация (UIKit)
+```
+AppCoordinator ── UITabBarController
+ ├─ LibraryCoordinator      Библиотека → Карточка книги
+ │   └─ SummaryCoordinator  Настройки (sheet) → Прогресс → Чтение
+ ├─ ImportCoordinator       модально: EPUB / ссылка
+ ├─ SummariesCoordinator    Пересказы → Чтение
+ └─ Профиль (ProfileView + ProfileViewModel)
+```
+- `Router` оборачивает UINavigationController: SwiftUI-экраны через UIHostingController, системная навбар скрыта, свайп назад работает, `onPop`-колбэки завершают дочерние координаторы
+- ViewModel сообщает о переходах замыканиями (`onSelectBook`, `onCreate`, `onBack`…) и не знает про UIKit
+- `SummaryCoordinator` держит `SummaryProgressViewModel`, пока идёт генерация, даже если экран свёрнут
+
+## Структура
+```
+ShortLib/
+├─ App/            AppDelegate, SceneDelegate, AppDependencies (DI, выбор движка пересказа)
+├─ Coordinators/   Coordinator, Router, App/Library/Import/Summary(+Summaries)
+├─ Features/       Library, Import, Summary, Summaries, Profile — View + ViewModel
+├─ Domain/         Book, Chapter, Summary (+SummaryPreset, DetailLevel, SummaryProgress), SampleData
+├─ Services/       BookRepository, ZipReader, EPUBParser, HTMLText, WebNovelScraper,
+│                  SummaryEngine (Extractive), Preferences, LLM/ (AnthropicClient, KeychainStore,
+│                  LLMSummaryEngine, Prompts)
+├─ DesignSystem/   DS + Components
+└─ Resources/      Assets.xcassets, Info.plist
+scripts/check-guidelines.sh   — Build Phase «Check Guidelines»
+.github/workflows/ios.yml     — CI
+```
+
+## Проект Xcode
+- `ShortLib.xcodeproj` изначально сгенерирован скриптом (не XcodeGen). Новые файлы — через Xcode или правкой `project.pbxproj` (PBXFileReference + PBXBuildFile + группа + Sources phase).
+- Bundle ID `com.shortlib.app`, deployment target 16.0, Swift 5, `ENABLE_USER_SCRIPT_SANDBOXING = NO` (для скрипта гайдлайнов)
+- `DEVELOPMENT_TEAM` в репо пустой; у пользователя локально выставлен свой Team — не коммитить.
+
+## Git
+- Push в `main` напрямую (одиночный разработчик). Перед push — `git pull --rebase`.
+- Обновление на Mac: `git stash && git pull origin main && git stash pop`.
+
+## Открытые задачи
+- Первая сборка в Xcode ещё не подтверждена
+- Нет unit-тестов (кандидаты: ZipReader/EPUBParser, TagParser, WebNovelScraper.extractChapterLinks, SummaryCostEstimate)
+- Фон: `BGProcessingTask` + локальное уведомление «Пересказ готов»
+- Share Extension для ссылок из Safari
