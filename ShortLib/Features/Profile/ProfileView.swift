@@ -5,6 +5,7 @@ struct ProfileView: View {
     @AppStorage(Preferences.detailLevelKey) private var defaultLevel: String = DetailLevel.balanced.rawValue
     @AppStorage(Preferences.modelChoiceKey) private var modelChoice: String = LLMModelChoice.quality.rawValue
     @AppStorage(Preferences.languageKey) private var language: String = SummaryLanguage.russian.rawValue
+    @FocusState private var isKeyFieldFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -29,11 +30,17 @@ struct ProfileView: View {
                                 .font(DS.Font.body)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
+                                .focused($isKeyFieldFocused)
+                                .submitLabel(.done)
+                                .onSubmit { isKeyFieldFocused = false }
                                 .padding(.horizontal, DS.Space.m)
                                 .padding(.vertical, 12)
                                 .overlay(RoundedRectangle(cornerRadius: DS.Radius.s).stroke(DS.Color.secondary, lineWidth: 1))
                             PrimaryButton(title: viewModel.status == .checking ? "Проверяем ключ…" : "Проверить и сохранить",
-                                          isFullWidth: true, isEnabled: viewModel.canSave, action: viewModel.save)
+                                          isFullWidth: true, isEnabled: viewModel.canSave) {
+                                isKeyFieldFocused = false
+                                viewModel.save()
+                            }
                             Text("Где взять ключ: console.anthropic.com → Settings → API Keys → Create Key. Пополните баланс в разделе Billing.")
                                 .font(DS.Font.caption).foregroundColor(DS.Color.secondary)
                                 .textSelection(.enabled)
@@ -94,6 +101,13 @@ struct ProfileView: View {
                 .padding(.bottom, DS.Space.xl)
             }
             .padding(.horizontal, DS.Space.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Тап по тексту и пустым местам закрывает клавиатуру; кнопки и поле получают тап первыми.
+            .contentShape(Rectangle())
+            .onTapGesture { isKeyFieldFocused = false }
         }
+        // Пустое место под содержимым и прокрутка тоже закрывают клавиатуру.
+        .background(DS.Color.background.ignoresSafeArea().onTapGesture { isKeyFieldFocused = false })
+        .scrollDismissesKeyboard(.interactively)
     }
 }

@@ -27,7 +27,7 @@ final class SummaryProgressViewModel: ObservableObject {
         SummaryProgress.Stage.allCases.filter { $0 != .connecting || !preset.noSpoilers }
     }
 
-    var badgeText: String { "\(preset.level.title) · \(Int((preset.ratio * 100).rounded()))%" }
+    var badgeText: String { "\(preset.level.title) · \(preset.level.wordRangeText)" }
     var percentText: String { "\(Int((progress.fraction * 100).rounded()))%" }
     var chaptersInRange: Int { preset.chapterRange.count }
 
