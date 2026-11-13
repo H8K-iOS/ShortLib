@@ -21,39 +21,25 @@ struct SummaryProgressView: View {
                             .font(DS.Font.callout).foregroundColor(DS.Color.secondary)
                     }
 
+                    // Главный элемент экрана: кольцо в тёплом свете. Его можно потянуть — оно вернётся на место.
                     ProgressRing(progress: viewModel.progress.fraction,
                                  title: viewModel.percentText,
                                  subtitle: viewModel.ringSubtitle)
+                        .dsElasticDrag()
                         .frame(maxWidth: .infinity)
-                        .padding(.top, DS.Space.s)
+                        .padding(.vertical, DS.Space.xl)
 
-                    // Сколько ждать и сколько глав готово.
-                    VStack(spacing: 2) {
-                        Text(WaitTimeText.text(viewModel.estimatedRemaining)).font(DS.Font.headline)
-                        Text("Готово \(viewModel.readyChapters) из \(RussianPlural.chapters(viewModel.chaptersInRange))")
-                            .font(DS.Font.caption.monospacedDigit()).foregroundColor(DS.Color.secondary)
+                    // Сколько ждать и что уже можно читать.
+                    VStack(spacing: DS.Space.xs) {
+                        Text(WaitTimeText.text(viewModel.estimatedRemaining)).font(DS.Font.title)
+                        Text(viewModel.canStartReading
+                             ? "\(readyRangeText) — можно читать"
+                             : "Готово \(viewModel.readyChapters) из \(RussianPlural.chapters(viewModel.chaptersInRange))")
+                            .font(DS.Font.callout.monospacedDigit()).foregroundColor(DS.Color.secondary)
                     }
+                    .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .combine)
-
-                    if viewModel.canStartReading {
-                        HStack(alignment: .top, spacing: DS.Space.m) {
-                            Image(systemName: "book")
-                                .font(DS.Font.headline).foregroundColor(DS.Color.ink)
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(readyRangeText).font(DS.Font.headline)
-                                Text("Можно читать — остальные главы появятся сами.")
-                                    .font(DS.Font.caption).foregroundColor(DS.Color.secondary)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(DS.Space.m)
-                        .background(DS.Color.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
-                        .accessibilityElement(children: .combine)
-                        .transition(.opacity)
-                    }
 
                     VStack(spacing: 0) {
                         ForEach(viewModel.stages, id: \.self) { stage in
@@ -80,7 +66,9 @@ struct SummaryProgressView: View {
             } trailing: {
                 // Как только готова первая глава, главное действие — читать; свернуть можно стрелкой вверху.
                 if viewModel.canStartReading {
-                    PrimaryButton(title: "Начать читать", action: viewModel.startReading)
+                    // Блик проходит при появлении кнопки и с каждой новой готовой главой.
+                    PrimaryButton(title: "Начать читать", shimmerTrigger: viewModel.readyChapters,
+                                  action: viewModel.startReading)
                 } else {
                     SecondaryButton(title: "Свернуть", action: viewModel.minimize)
                 }

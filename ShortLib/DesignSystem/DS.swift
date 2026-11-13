@@ -36,6 +36,24 @@ extension DS {
         /// Градиент главной кнопки.
         static let cta = LinearGradient(colors: [accent, accentDeep], startPoint: .leading, endPoint: .trailing)
 
+        /// «Тёплый свет»: подсвечивает один главный элемент экрана (кольцо прогресса, «Сейчас читаете»).
+        static let glowWarm = SwiftUI.Color("GlowWarm")
+        static let glowSoft = SwiftUI.Color("GlowSoft")
+
+        /// Неподвижное свечение за главным элементом. Без анимации — рисуется один раз.
+        static func glow(radius: CGFloat) -> RadialGradient {
+            RadialGradient(colors: [glowSoft.opacity(0.45), accent.opacity(0.16), SwiftUI.Color.clear],
+                           center: .center, startRadius: 0, endRadius: radius)
+        }
+
+        /// Тёплая дуга прогресса: от коралла к персиковому.
+        static let progressArc = AngularGradient(colors: [accent, glowWarm, glowSoft],
+                                                 center: .center, startAngle: .degrees(0), endAngle: .degrees(360))
+
+        /// Блик «переливания» поверх главной кнопки.
+        static let shimmer = LinearGradient(colors: [SwiftUI.Color.clear, SwiftUI.Color.white.opacity(0.45), SwiftUI.Color.clear],
+                                            startPoint: .leading, endPoint: .trailing)
+
         /// Обложки книг — тоже часть палитры, отдельных цветов в фичах нет.
         static let covers: [[SwiftUI.Color]] = [
             [SwiftUI.Color("Cover1A"), SwiftUI.Color("Cover1B")],
@@ -105,6 +123,8 @@ extension DS {
         static let tap: Animation = .easeOut(duration: 0.12)
         /// Плавное заполнение прогресса.
         static let progress: Animation = .easeOut(duration: 0.3)
+        /// Один проход блика по кнопке (не цикл): 0.9 c, только offset.
+        static let shimmer: Animation = .easeOut(duration: 0.9)
 
         /// Возвращает анимацию или nil, если включено «Уменьшение движения».
         static func respecting(_ animation: Animation) -> Animation? {

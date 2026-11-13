@@ -4,6 +4,8 @@ struct PrimaryButton: View {
     let title: String
     var isFullWidth = false
     var isEnabled = true
+    /// Если задан — по кнопке проходит блик при появлении и при каждой смене значения.
+    var shimmerTrigger: Int? = nil
     let action: () -> Void
 
     var body: some View {
@@ -15,6 +17,7 @@ struct PrimaryButton: View {
                 .padding(.horizontal, DS.Space.xl)
                 .frame(maxWidth: isFullWidth ? .infinity : nil)
                 .background(DS.Color.cta)
+                .modifier(ShimmerOnce(trigger: shimmerTrigger ?? 0, isActive: shimmerTrigger != nil))
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.s, style: .continuous))
                 .opacity(isEnabled ? 1 : 0.4)
         }
