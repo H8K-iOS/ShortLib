@@ -35,7 +35,7 @@
 		</dict>
 	</array>
 	<key>ShortLibProxyURL</key>
-	<string></string>
+	<string>https://shortlib-proxy.shortlib-proxy.workers.dev</string>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 </dict>

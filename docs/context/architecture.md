@@ -69,14 +69,16 @@ scripts/check-guidelines.sh   — Build Phase «Check Guidelines»
 - Ошибки прокси: `APIError.freeQuotaExceeded` (402), `.serviceLimit` (daily_cap или долгий rate_limited), `.proxy`.
   503 `daily_cap` не повторяется; `rate_limited` и `upstream_busy` повторяются, только если пауза ≤ 60 с.
 - Этап 2: App Attest (`X-ShortLib-Attest`) — после покупки Apple Developer.
+- **Развёрнут 2026-11-16:** `https://shortlib-proxy.shortlib-proxy.workers.dev` (вписан в Info.plist). Секрет `ANTHROPIC_API_KEY` задан,
+  `/health`, `/v1/quota` и тестовый `/v1/messages` отвечают 200. Повторный деплой: `cd server && npx wrangler deploy`.
+  `@cloudflare/workers-types` поднят до 5.x (иначе конфликт peer-зависимостей с wrangler 4.163).
 
 ## Git
 - Push в `main` напрямую (одиночный разработчик). Перед push — `git pull --rebase`.
 - Обновление на Mac: `git stash && git pull origin main && git stash pop`.
 
 ## Открытые задачи
-- Первая сборка в Xcode ещё не подтверждена
-- Прокси: Worker не прогонялся (`npm run typecheck`, `wrangler dev`); на этой машине нет Node
+- Прокси: проверить бесплатный пересказ из приложения на iPhone
 - Нет unit-тестов (кандидаты: ZipReader/EPUBParser, TagParser, WebNovelScraper.extractChapterLinks, SummaryCostEstimate)
 - Фон: `BGProcessingTask` + локальное уведомление «Пересказ готов»
 - Share Extension для ссылок из Safari
